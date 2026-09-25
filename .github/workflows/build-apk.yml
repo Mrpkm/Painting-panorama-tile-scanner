@@ -40,3 +40,7 @@ jobs:
           name: PhotoMosaicScanner-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - name: Install required SDK packages
+             run: |
+              yes | sdkmanager --licenses || true
+              sdkmanager "tools" "platform-tools" "platforms;android-34" "build-tools;34.0.0"
