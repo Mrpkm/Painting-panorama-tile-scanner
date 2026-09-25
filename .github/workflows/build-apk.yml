@@ -1,7 +1,5 @@
 name: Build Debug APK
 
-# Runs automatically on every push to main, and can also be triggered
-# manually from the Actions tab ("Run workflow").
 on:
   workflow_dispatch:
   push:
@@ -10,6 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -21,25 +20,20 @@ jobs:
           java-version: '17'
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install required SDK packages
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        uses: android-actions/setup-android@v4
+        with:
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
 
-      # This project's gradle-wrapper.jar binary isn't checked in (it couldn't
-      # be fetched in the offline environment that generated this project), so
-      # we invoke Gradle directly (installed by setup-gradle above) instead of
-      # via ./gradlew. If you later add a real wrapper jar, you can switch
-      # this to "./gradlew assembleDebug".
       - name: Build debug APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
