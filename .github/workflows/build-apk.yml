@@ -1,5 +1,9 @@
-name: Build Debug APK
-
+name: Setup Android SDK
+  uses: android-actions/setup-android@v3
+  with:
+    api-level: 34  # Adjust to your target API level
+    build-tools-version: '34.0.0'  # Adjust to match your build.gradle
+    ndk-version: '26.1.10909125'  # Optional: only if you need NDK
 on:
   push:
     branches: [ main ]
