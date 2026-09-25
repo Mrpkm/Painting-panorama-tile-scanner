@@ -19,10 +19,29 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-        with:
-          packages: 'platform-tools,platforms;android-34,build-tools;34.0.0'
+      - name: Install Android SDK commandline tools
+        shell: bash
+        env:
+          ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+        run: |
+          mkdir -p "$ANDROID_SDK_ROOT"
+          cd /tmp
+          curl -L -o commandlinetools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools.zip -d "$ANDROID_SDK_ROOT"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          if [ -d "$ANDROID_SDK_ROOT/cmdline-tools/bin" ]; then
+            echo "cmdline-tools already exists"
+          else
+            mv "$ANDROID_SDK_ROOT/cmdline-tools" "$ANDROID_SDK_ROOT/cmdline-tools-old" 2>/dev/null || true
+            mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+            mv "$ANDROID_SDK_ROOT/cmdline-tools-old/bin" "$ANDROID_SDK_ROOT/cmdline-tools/bin" 2>/dev/null || true
+            mv "$ANDROID_SDK_ROOT/cmdline-tools-old/lib" "$ANDROID_SDK_ROOT/cmdline-tools/lib" 2>/dev/null || true
+            mv "$ANDROID_SDK_ROOT/cmdline-tools-old/"* "$ANDROID_SDK_ROOT/cmdline-tools/" 2>/dev/null || true
+          fi
+
+          export PATH="$ANDROID_SDK_ROOT/cmdline-tools/bin:$PATH"
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
