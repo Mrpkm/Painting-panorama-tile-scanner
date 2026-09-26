@@ -1,55 +1,91 @@
-name: Build Debug APK
+package com.example.photomosaicscanner.ui.overview
 
-# Runs automatically on every push to main, and can also be triggered
-# manually from the Actions tab ("Run workflow").
-on:
-  workflow_dispatch:
-  push:
-    branches: [ main, master ]
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material3.Button
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import com.example.photomosaicscanner.grid.GridCalculator
+import com.example.photomosaicscanner.model.ScanSession
+import com.example.photomosaicscanner.session.SessionViewModel
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+@Composable
+fun OverviewScreen(
+    session: ScanSession,
+    viewModel: SessionViewModel,
+    onContinue: () -> Unit,
+    onFinish: () -> Unit,
+    onStartOver: () -> Unit
+) {
+    val order = GridCalculator.serpentineOrder(session.rows, session.columns)
+    val completed = session.completedTiles.size
+    val total = session.totalTiles
+    val progress = if (total > 0) completed.toFloat() / total else 0f
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: '17'
+    Column(modifier = Modifier.fillMaxSize().padding(20.dp)) {
+        Text(
+            "Painting: ${session.paintingWidth} × ${session.paintingHeight} ${session.units.label}",
+            style = MaterialTheme.typography.titleMedium
+        )
+        Text("Grid: ${session.rows} × ${session.columns}  •  Overlap: ${session.overlapPercent}%")
+        Spacer(Modifier.height(16.dp))
 
-      # ubuntu-latest runners already ship a full, current Android SDK
-      # (android-actions/setup-android's own log confirmed this: "Found
-      # preinstalled sdkmanager..."). That action then tried to replace it
-      # and install a legacy "tools" package Google removed from their
-      # repository years ago, which is what actually failed. So we skip
-      # that action entirely and just use the SDK that's already there.
-      - name: Put Android cmdline-tools on PATH
-        run: echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+        LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
+        Spacer(Modifier.height(4.dp))
+        Text("$completed / $total photographs")
+        Spacer(Modifier.height(16.dp))
 
-      - name: Accept licenses & install required SDK packages
-        run: |
-          yes | sdkmanager --licenses || true
-          sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+        Text("Tap a tile to jump to it for capture or retake:", style = MaterialTheme.typography.bodyMedium)
+        Spacer(Modifier.height(8.dp))
 
-      - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: 8.9
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(session.columns.coerceAtLeast(1)),
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            items(order) { tile ->
+                val isDone = session.completedTiles.containsKey(tile.fileKey)
+                val isCurrent = tile == session.currentTile
+                OutlinedButton(onClick = {
+                    viewModel.jumpToTile(tile)
+                    onContinue()
+                }) {
+                    Text(
+                        text = when {
+                            isCurrent -> "${tile.displayLabel}\n→"
+                            isDone -> "${tile.displayLabel}\n✓"
+                            else -> tile.displayLabel
+                        },
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+            }
+        }
 
-      # This project's gradle-wrapper.jar binary isn't checked in (it couldn't
-      # be fetched in the offline environment that generated this project), so
-      # we invoke Gradle directly (installed by setup-gradle above) instead of
-      # via ./gradlew. If you later add a real wrapper jar, you can switch
-      # this to "./gradlew assembleDebug".
-      - name: Build debug APK
-        run: gradle assembleDebug --no-daemon --stacktrace
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: PhotoMosaicScanner-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = onContinue, modifier = Modifier.weight(1f)) { Text("Continue") }
+            OutlinedButton(onClick = onFinish, modifier = Modifier.weight(1f)) { Text("Finish Session") }
+        }
+        Spacer(Modifier.height(8.dp))
+        TextButton(onClick = onStartOver) { Text("Start a new painting scan…") }
+    }
+}
