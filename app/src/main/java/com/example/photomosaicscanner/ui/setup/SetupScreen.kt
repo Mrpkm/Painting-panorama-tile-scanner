@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -92,7 +91,7 @@ fun SetupScreen(onConfirm: (Double, Double, PaintingUnits, Int, Int, Int) -> Uni
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = unitsExpanded) },
                 modifier = Modifier.menuAnchor().fillMaxWidth()
             )
-            androidx.compose.material3.ExposedDropdownMenu(
+            ExposedDropdownMenu(
                 expanded = unitsExpanded,
                 onDismissRequest = { unitsExpanded = false }
             ) {
