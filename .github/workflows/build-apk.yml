@@ -15,15 +15,21 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      # ubuntu-latest runners already ship a full, current Android SDK
+      # (android-actions/setup-android's own log confirmed this: "Found
+      # preinstalled sdkmanager..."). That action then tried to replace it
+      # and install a legacy "tools" package Google removed from their
+      # repository years ago, which is what actually failed. So we skip
+      # that action entirely and just use the SDK that's already there.
+      - name: Put Android cmdline-tools on PATH
+        run: echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
 
-      - name: Install required SDK packages
+      - name: Accept licenses & install required SDK packages
         run: |
           yes | sdkmanager --licenses || true
           sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
